@@ -9,16 +9,123 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          role: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          role?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string | null
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          admin_response: string | null
+          created_at: string
+          description: string | null
+          id: string
+          link_id: string
+          reason: string
+          reporter_email: string
+          status: Database["public"]["Enums"]["report_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          link_id: string
+          reason: string
+          reporter_email: string
+          status?: Database["public"]["Enums"]["report_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          link_id?: string
+          reason?: string
+          reporter_email?: string
+          status?: Database["public"]["Enums"]["report_status"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "shortened_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shortened_links: {
+        Row: {
+          clicks: number | null
+          created_at: string
+          id: string
+          original_url: string
+          short_code: string
+          status: Database["public"]["Enums"]["link_status"] | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number | null
+          created_at?: string
+          id?: string
+          original_url: string
+          short_code: string
+          status?: Database["public"]["Enums"]["link_status"] | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clicks?: number | null
+          created_at?: string
+          id?: string
+          original_url?: string
+          short_code?: string
+          status?: Database["public"]["Enums"]["link_status"] | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_short_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      link_status: "active" | "suspended" | "deleted"
+      report_status: "pending" | "reviewed" | "resolved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +240,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      link_status: ["active", "suspended", "deleted"],
+      report_status: ["pending", "reviewed", "resolved"],
+    },
   },
 } as const
