@@ -2,155 +2,101 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ReportForm } from '@/components/ReportForm';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangle, ExternalLink, Flag } from 'lucide-react';
+import { ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
 
 export const RedirectPage = () => {
-  const { shortCode } = useParams<{ shortCode: string }>();
+  const { shortCode } = useParams();
   const [loading, setLoading] = useState(true);
-  const [link, setLink] = useState<any>(null);
-  const [showReport, setShowReport] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [error, setError] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchAndRedirect = async () => {
-      if (!shortCode) return;
+    const handleRedirect = async () => {
+      if (!shortCode) {
+        setError('رمز الرابط غير صالح');
+        setLoading(false);
+        return;
+      }
 
       try {
-        const { data, error } = await supabase
+        // البحث عن الرابط المختصر
+        const { data: linkData, error: linkError } = await supabase
           .from('shortened_links')
           .select('*')
           .eq('short_code', shortCode)
-          .eq('status', 'active')
           .single();
 
-        if (error || !data) {
+        if (linkError || !linkData) {
+          setError('الرابط غير موجود أو انتهت صلاحيته');
           setLoading(false);
           return;
         }
 
-        setLink(data);
+        // التحقق من حالة الرابط
+        if (linkData.status !== 'active') {
+          setError('هذا الرابط غير متاح حالياً');
+          setLoading(false);
+          return;
+        }
 
-        // Update click count
+        // تحديث عدد النقرات
         await supabase
           .from('shortened_links')
-          .update({ clicks: (data.clicks || 0) + 1 })
-          .eq('id', data.id);
+          .update({ clicks: (linkData.clicks || 0) + 1 })
+          .eq('id', linkData.id);
 
-        // Start countdown
-        const timer = setInterval(() => {
-          setCountdown((prev) => {
-            if (prev <= 1) {
-              clearInterval(timer);
-              window.location.href = data.original_url;
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-
-        setLoading(false);
-
-        return () => clearInterval(timer);
+        // التوجه المباشر للرابط
+        window.location.href = linkData.original_url;
+        
       } catch (error) {
-        console.error('Error fetching link:', error);
+        console.error('Error redirecting:', error);
+        setError('حدث خطأ أثناء التوجيه');
         setLoading(false);
       }
     };
 
-    fetchAndRedirect();
+    handleRedirect();
   }, [shortCode]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>جاري تحميل الرابط...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!link) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">الرابط غير موجود</h2>
-            <p className="text-gray-600">
-              عذراً، الرابط المطلوب غير موجود أو تم حذفه.
-            </p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">جاري التوجيه...</h2>
+            <p className="text-gray-600 text-center">يتم توجيهك إلى الرابط المطلوب</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (showReport) {
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="w-full max-w-md space-y-4">
-          <ReportForm 
-            shortCode={shortCode!} 
-            onSuccess={() => setShowReport(false)} 
-          />
-          <Button 
-            variant="outline" 
-            onClick={() => setShowReport(false)}
-            className="w-full"
-          >
-            العودة
-          </Button>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+            <CardTitle className="text-xl font-bold text-gray-900">خطأ في الرابط</CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button 
+              onClick={() => window.location.href = '/'} 
+              className="w-full"
+            >
+              العودة إلى الصفحة الرئيسية
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardContent className="p-6 text-center space-y-4">
-          <div className="text-6xl font-bold text-blue-600">{countdown}</div>
-          
-          <h2 className="text-xl font-semibold">جاري إعادة التوجيه...</h2>
-          
-          <p className="text-gray-600">
-            سيتم توجيهك إلى الرابط خلال {countdown} ثانية
-          </p>
-          
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500 break-all">
-              {link.title && <strong>{link.title}</strong>}
-            </p>
-            <p className="text-xs text-gray-400 break-all" dir="ltr">
-              {link.original_url}
-            </p>
-          </div>
-          
-          <div className="flex space-x-2 justify-center">
-            <Button
-              onClick={() => window.location.href = link.original_url}
-              className="flex items-center space-x-2"
-            >
-              <ExternalLink className="h-4 w-4" />
-              <span>انتقال فوري</span>
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={() => setShowReport(true)}
-              className="flex items-center space-x-2"
-            >
-              <Flag className="h-4 w-4" />
-              <span>إبلاغ</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return null;
 };

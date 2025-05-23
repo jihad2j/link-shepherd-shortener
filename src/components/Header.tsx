@@ -1,11 +1,15 @@
 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, User, Link as LinkIcon } from 'lucide-react';
+import { useAdmin } from '@/hooks/useAdmin';
+import { LogOut, User, Link as LinkIcon, Settings } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export const Header = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -34,6 +38,17 @@ export const Header = () => {
           
           {user && (
             <div className="flex items-center space-x-4">
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/admin')}
+                  className="flex items-center space-x-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>لوحة الإدارة</span>
+                </Button>
+              )}
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <User className="h-4 w-4" />
                 <span>{user.email}</span>
