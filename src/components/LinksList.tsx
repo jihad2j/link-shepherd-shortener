@@ -1,14 +1,15 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Copy, ExternalLink, BarChart3 } from 'lucide-react';
+import { Edit, Trash2, Copy, ExternalLink, BarChart3, MoreVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Link {
   id: string;
@@ -27,6 +28,7 @@ export const LinksList = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const fetchLinks = async () => {
     try {
@@ -124,6 +126,125 @@ export const LinksList = () => {
     });
   };
 
+  const renderMobileCard = (link: Link) => (
+    <Card key={link.id} className="mb-4">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-sm truncate">
+                  {link.title || 'بدون عنوان'}
+                </h3>
+                <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                  <BarChart3 className="h-3 w-3" />
+                  <span>{link.clicks}</span>
+                </Badge>
+              </div>
+              <p className="text-xs text-gray-600 break-all mb-1">{link.original_url}</p>
+              <p className="text-xs font-mono text-blue-600 break-all" dir="ltr">
+                {window.location.origin}/{link.short_code}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                تم الإنشاء: {new Date(link.created_at).toLocaleDateString('ar-SA')}
+              </p>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 ml-2">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => copyShortUrl(link.short_code)}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  نسخ الرابط
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open(`/${link.short_code}`, '_blank')}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  فتح الرابط
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleEdit(link)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  تعديل
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleDelete(link.id)}
+                  className="text-red-600"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  حذف
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderDesktopCard = (link: Link) => (
+    <div key={link.id} className="border rounded-lg p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1 flex-1">
+          <div className="flex items-center space-x-2">
+            <h3 className="font-semibold">
+              {link.title || 'بدون عنوان'}
+            </h3>
+            <Badge variant="secondary" className="flex items-center space-x-1">
+              <BarChart3 className="h-3 w-3" />
+              <span>{link.clicks} نقرة</span>
+            </Badge>
+          </div>
+          <p className="text-sm text-gray-600 break-all">{link.original_url}</p>
+          <p className="text-sm font-mono text-blue-600 break-all" dir="ltr">
+            {window.location.origin}/{link.short_code}
+          </p>
+          <p className="text-xs text-gray-400">
+            تم الإنشاء: {new Date(link.created_at).toLocaleDateString('ar-SA')}
+          </p>
+        </div>
+        
+        <div className="flex space-x-2 ml-4">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => copyShortUrl(link.short_code)}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(`/${link.short_code}`, '_blank')}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEdit(link)}
+            title="تعديل الرابط"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => handleDelete(link.id)}
+            title="حذف الرابط"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <Card className="w-full max-w-4xl mx-auto">
@@ -147,64 +268,7 @@ export const LinksList = () => {
         ) : (
           <div className="space-y-4">
             {links.map((link) => (
-              <div key={link.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold">
-                        {link.title || 'بدون عنوان'}
-                      </h3>
-                      <Badge variant="secondary" className="flex items-center space-x-1">
-                        <BarChart3 className="h-3 w-3" />
-                        <span>{link.clicks} نقرة</span>
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 break-all">{link.original_url}</p>
-                    <p className="text-sm font-mono text-blue-600 break-all" dir="ltr">
-                      {window.location.origin}/{link.short_code}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      تم الإنشاء: {new Date(link.created_at).toLocaleDateString('ar-SA')}
-                    </p>
-                  </div>
-                  
-                  <div className="flex space-x-2 ml-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyShortUrl(link.short_code)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => window.open(`/${link.short_code}`, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(link)}
-                      title="تعديل الرابط"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(link.id)}
-                      title="حذف الرابط"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              isMobile ? renderMobileCard(link) : renderDesktopCard(link)
             ))}
           </div>
         )}
