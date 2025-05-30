@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,24 +36,47 @@ export const UserSessions = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // First get all sessions
+      const { data: sessionsData, error: sessionsError } = await supabase
         .from('user_sessions')
-        .select(`
-          *,
-          profiles:user_id (
-            email,
-            full_name
-          )
-        `)
+        .select('*')
         .order('last_activity', { ascending: false })
         .limit(100);
 
-      if (error) {
-        console.error('Error fetching sessions:', error);
-        throw error;
+      if (sessionsError) {
+        console.error('Error fetching sessions:', sessionsError);
+        throw sessionsError;
       }
 
-      setSessions(data || []);
+      // Get unique user IDs that are not null
+      const userIds = [...new Set(
+        sessionsData
+          ?.filter(session => session.user_id)
+          .map(session => session.user_id)
+      )];
+
+      // Fetch profiles for those users
+      let profilesData: any[] = [];
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+          .in('id', userIds);
+
+        if (!profilesError) {
+          profilesData = profiles || [];
+        }
+      }
+
+      // Combine sessions with profiles
+      const sessionsWithProfiles = sessionsData?.map(session => ({
+        ...session,
+        profiles: session.user_id 
+          ? profilesData.find(profile => profile.id === session.user_id) || null
+          : null
+      })) || [];
+
+      setSessions(sessionsWithProfiles);
     } catch (error: any) {
       console.error('Error in fetchSessions:', error);
       toast({
