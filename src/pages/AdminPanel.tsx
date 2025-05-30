@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -11,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReportsManagement } from '@/components/ReportsManagement';
 import { UserSessions } from '@/components/UserSessions';
 import { toast } from '@/hooks/use-toast';
-import { Users, Shield, Ban, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Users, Shield, Ban, CheckCircle, Loader2, AlertTriangle, Cookie } from 'lucide-react';
+import { UserCookiesModal } from '@/components/UserCookiesModal';
 
 interface Profile {
   id: string;
@@ -27,6 +27,8 @@ export const AdminPanel = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [cookiesModalOpen, setCookiesModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; email: string } | null>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -117,6 +119,16 @@ export const AdminPanel = () => {
     } finally {
       setUpdating(null);
     }
+  };
+
+  const handleViewCookies = (userId: string, userEmail: string) => {
+    setSelectedUser({ id: userId, email: userEmail });
+    setCookiesModalOpen(true);
+  };
+
+  const handleCloseCookiesModal = () => {
+    setCookiesModalOpen(false);
+    setSelectedUser(null);
   };
 
   if (adminLoading) {
@@ -213,7 +225,7 @@ export const AdminPanel = () => {
                             {new Date(profile.created_at).toLocaleDateString('ar-SA')}
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
                               {profile.status === 'active' ? (
                                 <Button
                                   size="sm"
@@ -265,6 +277,15 @@ export const AdminPanel = () => {
                                   جعل مستخدم
                                 </Button>
                               )}
+
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleViewCookies(profile.id, profile.email)}
+                              >
+                                <Cookie className="h-4 w-4" />
+                                الكوكيز
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -285,6 +306,13 @@ export const AdminPanel = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <UserCookiesModal
+        userId={selectedUser?.id || ''}
+        userEmail={selectedUser?.email || ''}
+        isOpen={cookiesModalOpen}
+        onClose={handleCloseCookiesModal}
+      />
     </div>
   );
 };
