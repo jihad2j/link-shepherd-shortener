@@ -86,6 +86,7 @@ export type Database = {
           created_at: string
           id: string
           original_url: string
+          redirect_type: string | null
           short_code: string
           status: Database["public"]["Enums"]["link_status"] | null
           title: string | null
@@ -97,6 +98,7 @@ export type Database = {
           created_at?: string
           id?: string
           original_url: string
+          redirect_type?: string | null
           short_code: string
           status?: Database["public"]["Enums"]["link_status"] | null
           title?: string | null
@@ -108,6 +110,7 @@ export type Database = {
           created_at?: string
           id?: string
           original_url?: string
+          redirect_type?: string | null
           short_code?: string
           status?: Database["public"]["Enums"]["link_status"] | null
           title?: string | null
