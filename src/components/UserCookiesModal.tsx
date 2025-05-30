@@ -43,7 +43,16 @@ export const UserCookiesModal = ({ userId, userEmail, isOpen, onClose }: UserCoo
         throw error;
       }
 
-      setSessions(data || []);
+      // Map the database fields to our interface
+      const mappedSessions: SessionCookies[] = (data || []).map(session => ({
+        sessionId: session.session_id,
+        lastActivity: session.last_activity,
+        deviceType: session.device_type || 'غير محدد',
+        cookiesData: session.cookies_data,
+        browserInfo: session.browser_info
+      }));
+
+      setSessions(mappedSessions);
     } catch (error: any) {
       console.error('Error in fetchUserSessions:', error);
       toast({
@@ -113,7 +122,7 @@ export const UserCookiesModal = ({ userId, userEmail, isOpen, onClose }: UserCoo
                     </Badge>
                   </CardTitle>
                   <div className="text-sm text-gray-600">
-                    <p><strong>نوع الجهاز:</strong> {session.deviceType || 'غير محدد'}</p>
+                    <p><strong>نوع الجهاز:</strong> {session.deviceType}</p>
                     <p><strong>المتصفح:</strong> {session.browserInfo?.name || 'غير محدد'}</p>
                   </div>
                 </CardHeader>
