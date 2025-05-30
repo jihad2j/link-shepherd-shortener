@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ReportsManagement } from '@/components/ReportsManagement';
 import { toast } from '@/hooks/use-toast';
-import { Users, Shield, Ban, CheckCircle, Loader2 } from 'lucide-react';
+import { Users, Shield, Ban, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -144,116 +146,135 @@ export const AdminPanel = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Users className="h-8 w-8 text-blue-600" />
-            لوحة إدارة المستخدمين
+            <Shield className="h-8 w-8 text-blue-600" />
+            لوحة التحكم الإدارية
           </h1>
-          <p className="text-gray-600 mt-2">إدارة المستخدمين والصلاحيات</p>
+          <p className="text-gray-600 mt-2">إدارة المستخدمين والتقارير</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>قائمة المستخدمين</CardTitle>
-            <CardDescription>
-              يمكنك إدارة حالة المستخدمين وصلاحياتهم من هنا
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>البريد الإلكتروني</TableHead>
-                    <TableHead>الاسم الكامل</TableHead>
-                    <TableHead>الدور</TableHead>
-                    <TableHead>الحالة</TableHead>
-                    <TableHead>تاريخ الإنشاء</TableHead>
-                    <TableHead>الإجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {profiles.map((profile) => (
-                    <TableRow key={profile.id}>
-                      <TableCell className="font-medium">{profile.email}</TableCell>
-                      <TableCell>{profile.full_name || 'غير محدد'}</TableCell>
-                      <TableCell>
-                        <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
-                          {profile.role === 'admin' ? 'مشرف' : 'مستخدم'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={profile.status === 'active' ? 'default' : 'destructive'}>
-                          {profile.status === 'active' ? 'نشط' : 'معطل'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(profile.created_at).toLocaleDateString('ar-SA')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {profile.status === 'active' ? (
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => updateUserStatus(profile.id, 'suspended')}
-                              disabled={updating === profile.id}
-                            >
-                              {updating === profile.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              إدارة المستخدمين
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              إدارة التقارير
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <CardTitle>قائمة المستخدمين</CardTitle>
+                <CardDescription>
+                  يمكنك إدارة حالة المستخدمين وصلاحياتهم من هنا
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>البريد الإلكتروني</TableHead>
+                        <TableHead>الاسم الكامل</TableHead>
+                        <TableHead>الدور</TableHead>
+                        <TableHead>الحالة</TableHead>
+                        <TableHead>تاريخ الإنشاء</TableHead>
+                        <TableHead>الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {profiles.map((profile) => (
+                        <TableRow key={profile.id}>
+                          <TableCell className="font-medium">{profile.email}</TableCell>
+                          <TableCell>{profile.full_name || 'غير محدد'}</TableCell>
+                          <TableCell>
+                            <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
+                              {profile.role === 'admin' ? 'مشرف' : 'مستخدم'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={profile.status === 'active' ? 'default' : 'destructive'}>
+                              {profile.status === 'active' ? 'نشط' : 'معطل'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(profile.created_at).toLocaleDateString('ar-SA')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {profile.status === 'active' ? (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => updateUserStatus(profile.id, 'suspended')}
+                                  disabled={updating === profile.id}
+                                >
+                                  {updating === profile.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Ban className="h-4 w-4" />
+                                  )}
+                                  تعطيل
+                                </Button>
                               ) : (
-                                <Ban className="h-4 w-4" />
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => updateUserStatus(profile.id, 'active')}
+                                  disabled={updating === profile.id}
+                                >
+                                  {updating === profile.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4" />
+                                  )}
+                                  تفعيل
+                                </Button>
                               )}
-                              تعطيل
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => updateUserStatus(profile.id, 'active')}
-                              disabled={updating === profile.id}
-                            >
-                              {updating === profile.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                              
+                              {profile.role === 'user' ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateUserRole(profile.id, 'admin')}
+                                  disabled={updating === profile.id}
+                                >
+                                  <Shield className="h-4 w-4" />
+                                  جعل مشرف
+                                </Button>
                               ) : (
-                                <CheckCircle className="h-4 w-4" />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateUserRole(profile.id, 'user')}
+                                  disabled={updating === profile.id}
+                                >
+                                  <Users className="h-4 w-4" />
+                                  جعل مستخدم
+                                </Button>
                               )}
-                              تفعيل
-                            </Button>
-                          )}
-                          
-                          {profile.role === 'user' ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateUserRole(profile.id, 'admin')}
-                              disabled={updating === profile.id}
-                            >
-                              <Shield className="h-4 w-4" />
-                              جعل مشرف
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateUserRole(profile.id, 'user')}
-                              disabled={updating === profile.id}
-                            >
-                              <Users className="h-4 w-4" />
-                              جعل مستخدم
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <ReportsManagement />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

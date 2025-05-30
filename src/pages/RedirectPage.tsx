@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ReportLinkButton } from '@/components/ReportLinkButton';
 import { ExternalLink, AlertTriangle, Clock, Eye } from 'lucide-react';
 
 export const RedirectPage = () => {
@@ -114,13 +115,16 @@ export const RedirectPage = () => {
             <CardTitle className="text-xl font-bold text-gray-900">خطأ في الرابط</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
+          <CardContent className="text-center space-y-4">
             <Button 
               onClick={() => window.location.href = '/'} 
               className="w-full"
             >
               العودة إلى الصفحة الرئيسية
             </Button>
+            {shortCode && (
+              <ReportLinkButton shortCode={shortCode} />
+            )}
           </CardContent>
         </Card>
       </div>
@@ -151,6 +155,7 @@ export const RedirectPage = () => {
             >
               انتقال فوري
             </Button>
+            <ReportLinkButton shortCode={shortCode!} />
           </CardContent>
         </Card>
       </div>
@@ -190,6 +195,10 @@ export const RedirectPage = () => {
               >
                 {adViewed ? 'جاري التوجيه...' : 'شاهدت الإعلان - متابعة'}
               </Button>
+            </div>
+            
+            <div className="text-center">
+              <ReportLinkButton shortCode={shortCode!} />
             </div>
             
             {linkData.title && (
