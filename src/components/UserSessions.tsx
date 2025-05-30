@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +53,14 @@ export const UserSessions = () => {
       }
 
       console.log('Sessions data:', data);
-      setSessions(data || []);
+      
+      // Transform the data to match our interface
+      const transformedSessions: UserSession[] = (data || []).map(session => ({
+        ...session,
+        ip_address: session.ip_address ? String(session.ip_address) : null,
+      }));
+      
+      setSessions(transformedSessions);
     } catch (error: any) {
       console.error('Error in fetchSessions:', error);
       toast({

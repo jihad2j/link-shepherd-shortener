@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button';
 import { ReportLinkButton } from '@/components/ReportLinkButton';
 import { ExternalLink, AlertTriangle, Clock, Eye } from 'lucide-react';
 
+interface Advertisement {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string;
+  target_url: string | null;
+}
+
 export const RedirectPage = () => {
   const { shortCode } = useParams();
   const [error, setError] = useState<string | null>(null);
@@ -15,6 +23,33 @@ export const RedirectPage = () => {
   const [showAd, setShowAd] = useState(false);
   const [adViewed, setAdViewed] = useState(false);
   const [isDirectRedirect, setIsDirectRedirect] = useState(false);
+  const [advertisement, setAdvertisement] = useState<Advertisement | null>(null);
+
+  const fetchRandomAdvertisement = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('advertisements')
+        .select('*')
+        .eq('is_active', true)
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching advertisements:', error);
+        return null;
+      }
+
+      if (data && data.length > 0) {
+        // Select a random advertisement
+        const randomIndex = Math.floor(Math.random() * data.length);
+        return data[randomIndex];
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error in fetchRandomAdvertisement:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const handleRedirect = async () => {
@@ -71,7 +106,9 @@ export const RedirectPage = () => {
             });
           }, 1000);
         } else if (redirectType === 'ad') {
-          // إظهار صفحة الإعلانات
+          // إظهار صفحة الإعلانات مع جلب إعلان عشوائي
+          const randomAd = await fetchRandomAdvertisement();
+          setAdvertisement(randomAd);
           setShowAd(true);
         }
         
@@ -97,6 +134,12 @@ export const RedirectPage = () => {
         window.location.href = linkData.original_url;
       }
     }, 1000);
+  };
+
+  const handleAdClick = () => {
+    if (advertisement?.target_url) {
+      window.open(advertisement.target_url, '_blank');
+    }
   };
 
   // في حالة التوجيه المباشر، لا نعرض شيء
@@ -173,12 +216,32 @@ export const RedirectPage = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* منطقة الإعلان */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-8 rounded-lg text-center">
-              <Eye className="h-16 w-16 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold mb-2">إعلان تجريبي</h3>
-              <p className="text-lg opacity-90">شكراً لك على دعم موقعنا!</p>
-              <p className="text-sm mt-4 opacity-75">هذا إعلان تجريبي - يمكن استبداله بإعلانات حقيقية</p>
-            </div>
+            {advertisement ? (
+              <div 
+                className="bg-white border-2 border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={handleAdClick}
+              >
+                <img 
+                  src={advertisement.image_url} 
+                  alt={advertisement.title}
+                  className="w-full h-48 object-cover rounded-lg mb-4"
+                />
+                <h3 className="text-xl font-bold mb-2">{advertisement.title}</h3>
+                {advertisement.description && (
+                  <p className="text-gray-600 mb-4">{advertisement.description}</p>
+                )}
+                {advertisement.target_url && (
+                  <p className="text-sm text-blue-600">انقر للمزيد ←</p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-8 rounded-lg text-center">
+                <Eye className="h-16 w-16 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold mb-2">إعلان تجريبي</h3>
+                <p className="text-lg opacity-90">شكراً لك على دعم موقعنا!</p>
+                <p className="text-sm mt-4 opacity-75">هذا إعلان تجريبي - يمكن استبداله بإعلانات حقيقية</p>
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button 
