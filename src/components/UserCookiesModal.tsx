@@ -4,8 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Cookie, Loader2, Calendar, Monitor } from 'lucide-react';
 
 interface UserCookiesModalProps {
@@ -26,6 +28,7 @@ interface SessionCookies {
 export const UserCookiesModal = ({ userId, userEmail, isOpen, onClose }: UserCookiesModalProps) => {
   const [sessions, setSessions] = useState<SessionCookies[]>([]);
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   const fetchUserSessions = async () => {
     try {
@@ -88,6 +91,112 @@ export const UserCookiesModal = ({ userId, userEmail, isOpen, onClose }: UserCoo
     return String(value || 'غير محدد');
   };
 
+  const Content = () => (
+    <>
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            لا توجد جلسات لهذا المستخدم
+          </div>
+        ) : (
+          <div className="space-y-3 sm:space-y-4">
+            {sessions.map((session, index) => (
+              <Card key={session.sessionId || index} className="border">
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="text-sm sm:text-base lg:text-lg flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span>جلسة #{index + 1}</span>
+                    </div>
+                    <Badge variant="outline" className="flex items-center gap-1 text-xs self-start">
+                      <Calendar className="h-3 w-3" />
+                      <span>{isMobile ? new Date(session.lastActivity).toLocaleDateString('ar-SA') : formatDate(session.lastActivity)}</span>
+                    </Badge>
+                  </CardTitle>
+                  <div className="text-xs sm:text-sm text-gray-600 space-y-1">
+                    <p><strong>نوع الجهاز:</strong> {session.deviceType}</p>
+                    <p><strong>المتصفح:</strong> {session.browserInfo?.name || 'غير محدد'}</p>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 sm:space-y-4">
+                  <div>
+                    <h5 className="font-medium text-gray-900 mb-2 text-xs sm:text-sm lg:text-base">الكوكيز:</h5>
+                    {session.cookiesData && Object.keys(session.cookiesData).length > 0 ? (
+                      <div className="bg-gray-50 rounded-lg p-2 sm:p-3 space-y-2 max-h-32 sm:max-h-48 overflow-y-auto">
+                        {Object.entries(session.cookiesData).map(([key, value]) => (
+                          <div key={key} className="border-b border-gray-200 pb-1 sm:pb-2 last:border-b-0">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium text-blue-600 text-xs break-all">
+                                {key}:
+                              </span>
+                              <span className="text-gray-700 text-xs bg-white p-1 sm:p-2 rounded border break-all max-h-16 sm:max-h-20 overflow-y-auto">
+                                {renderCookieValue(value)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-xs sm:text-sm">لا توجد كوكيز لهذه الجلسة</p>
+                    )}
+                  </div>
+
+                  {session.browserInfo && (
+                    <div>
+                      <h5 className="font-medium text-gray-900 mb-2 text-xs sm:text-sm lg:text-base">معلومات المتصفح الإضافية:</h5>
+                      <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
+                        <div className="grid grid-cols-1 gap-1 sm:gap-2 text-xs">
+                          {session.browserInfo.language && (
+                            <p className="break-all"><strong>اللغة:</strong> {session.browserInfo.language}</p>
+                          )}
+                          {session.browserInfo.platform && (
+                            <p className="break-all"><strong>المنصة:</strong> {session.browserInfo.platform}</p>
+                          )}
+                          {session.browserInfo.cookieEnabled !== undefined && (
+                            <p><strong>الكوكيز مفعلة:</strong> {session.browserInfo.cookieEnabled ? 'نعم' : 'لا'}</p>
+                          )}
+                          {session.browserInfo.onLine !== undefined && (
+                            <p><strong>متصل:</strong> {session.browserInfo.onLine ? 'نعم' : 'لا'}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end p-3 sm:p-4 lg:p-6 border-t bg-gray-50">
+        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto text-sm">
+          إغلاق
+        </Button>
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0">
+          <SheetHeader className="p-3 border-b">
+            <SheetTitle className="flex items-center gap-2 text-sm">
+              <Cookie className="h-4 w-4" />
+              <span className="truncate">معلومات الكوكيز: {userEmail}</span>
+            </SheetTitle>
+          </SheetHeader>
+          <Content />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0">
@@ -97,95 +206,7 @@ export const UserCookiesModal = ({ userId, userEmail, isOpen, onClose }: UserCoo
             <span className="truncate">معلومات الكوكيز للمستخدم: {userEmail}</span>
           </DialogTitle>
         </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : sessions.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              لا توجد جلسات لهذا المستخدم
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {sessions.map((session, index) => (
-                <Card key={session.sessionId || index} className="border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base sm:text-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <span className="flex items-center gap-2">
-                        <Monitor className="h-4 w-4" />
-                        جلسة #{index + 1}
-                      </span>
-                      <Badge variant="outline" className="flex items-center gap-1 text-xs">
-                        <Calendar className="h-3 w-3" />
-                        <span className="hidden sm:inline">{formatDate(session.lastActivity)}</span>
-                        <span className="sm:hidden">{new Date(session.lastActivity).toLocaleDateString('ar-SA')}</span>
-                      </Badge>
-                    </CardTitle>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p><strong>نوع الجهاز:</strong> {session.deviceType}</p>
-                      <p><strong>المتصفح:</strong> {session.browserInfo?.name || 'غير محدد'}</p>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h5 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">الكوكيز:</h5>
-                        {session.cookiesData && Object.keys(session.cookiesData).length > 0 ? (
-                          <div className="bg-gray-50 rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto">
-                            {Object.entries(session.cookiesData).map(([key, value]) => (
-                              <div key={key} className="border-b border-gray-200 pb-2 last:border-b-0">
-                                <div className="flex flex-col gap-1">
-                                  <span className="font-medium text-blue-600 text-xs sm:text-sm break-all">
-                                    {key}:
-                                  </span>
-                                  <span className="text-gray-700 text-xs bg-white p-2 rounded border break-all max-h-20 overflow-y-auto">
-                                    {renderCookieValue(value)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500 text-sm">لا توجد كوكيز لهذه الجلسة</p>
-                        )}
-                      </div>
-
-                      {session.browserInfo && (
-                        <div>
-                          <h5 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">معلومات المتصفح الإضافية:</h5>
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs sm:text-sm">
-                              {session.browserInfo.language && (
-                                <p className="break-all"><strong>اللغة:</strong> {session.browserInfo.language}</p>
-                              )}
-                              {session.browserInfo.platform && (
-                                <p className="break-all"><strong>المنصة:</strong> {session.browserInfo.platform}</p>
-                              )}
-                              {session.browserInfo.cookieEnabled !== undefined && (
-                                <p><strong>الكوكيز مفعلة:</strong> {session.browserInfo.cookieEnabled ? 'نعم' : 'لا'}</p>
-                              )}
-                              {session.browserInfo.onLine !== undefined && (
-                                <p><strong>متصل:</strong> {session.browserInfo.onLine ? 'نعم' : 'لا'}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end p-4 sm:p-6 border-t bg-gray-50">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            إغلاق
-          </Button>
-        </div>
+        <Content />
       </DialogContent>
     </Dialog>
   );
