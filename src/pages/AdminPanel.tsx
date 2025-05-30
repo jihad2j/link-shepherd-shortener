@@ -395,12 +395,12 @@ export const AdminPanel = () => {
           <div className="min-h-screen bg-gray-50">
             <Header />
             
-            <div className="flex items-center gap-2 px-4 py-3 border-b bg-white">
+            <div className="flex items-center gap-2 px-4 sm:px-6 lg:px-8 py-3 border-b bg-white">
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">لوحة التحكم الإدارية</h1>
             </div>
 
-            <main className="p-4 sm:p-6">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               {renderTabContent()}
             </main>
           </div>
