@@ -85,12 +85,20 @@ export const useSessionTracking = () => {
         .single();
 
       if (existingSession) {
-        // Update existing session
+        // Update existing session with incremented page views
+        const { data: currentSession } = await supabase
+          .from('user_sessions')
+          .select('page_views')
+          .eq('session_id', sessionId)
+          .single();
+
+        const currentPageViews = currentSession?.page_views || 1;
+
         await supabase
           .from('user_sessions')
           .update({
             last_activity: new Date().toISOString(),
-            page_views: supabase.sql`page_views + 1`,
+            page_views: currentPageViews + 1,
             user_id: user?.id || null,
           })
           .eq('session_id', sessionId);
