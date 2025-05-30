@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Header } from '@/components/Header';
@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReportsManagement } from '@/components/ReportsManagement';
 import { UserSessions } from '@/components/UserSessions';
 import { toast } from '@/hooks/use-toast';
-import { Users, Shield, Ban, CheckCircle, Loader2, AlertTriangle, Cookie } from 'lucide-react';
+import { Users, Shield, Ban, CheckCircle, Loader2, Cookie } from 'lucide-react';
 import { UserCookiesModal } from '@/components/UserCookiesModal';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/AppSidebar';
 
 interface Profile {
   id: string;
@@ -32,6 +33,8 @@ export const AdminPanel = () => {
   const [cookiesModalOpen, setCookiesModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ id: string; email: string } | null>(null);
   const isMobile = useIsMobile();
+  const [searchParams] = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'users';
 
   useEffect(() => {
     if (isAdmin) {
@@ -251,166 +254,158 @@ export const AdminPanel = () => {
     </Card>
   );
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
-            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
-            لوحة التحكم الإدارية
-          </h1>
-          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">إدارة المستخدمين والتقارير وجلسات المستخدمين</p>
-        </div>
-
-        <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 h-auto' : 'grid-cols-3'}`}>
-            <TabsTrigger value="users" className="flex items-center gap-2 text-sm">
-              <Users className="h-4 w-4" />
-              إدارة المستخدمين
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2 text-sm">
-              <AlertTriangle className="h-4 w-4" />
-              إدارة التقارير
-            </TabsTrigger>
-            <TabsTrigger value="sessions" className="flex items-center gap-2 text-sm">
-              <Users className="h-4 w-4" />
-              جلسات المستخدمين
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl">قائمة المستخدمين</CardTitle>
-                <CardDescription className="text-sm">
-                  يمكنك إدارة حالة المستخدمين وصلاحياتهم من هنا
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                  </div>
-                ) : isMobile ? (
-                  <div className="space-y-4">
-                    {profiles.map(renderMobileUserCard)}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>البريد الإلكتروني</TableHead>
-                          <TableHead>الاسم الكامل</TableHead>
-                          <TableHead>الدور</TableHead>
-                          <TableHead>الحالة</TableHead>
-                          <TableHead>تاريخ الإنشاء</TableHead>
-                          <TableHead>الإجراءات</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {profiles.map((profile) => (
-                          <TableRow key={profile.id}>
-                            <TableCell className="font-medium">{profile.email}</TableCell>
-                            <TableCell>{profile.full_name || 'غير محدد'}</TableCell>
-                            <TableCell>
-                              <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
-                                {profile.role === 'admin' ? 'مشرف' : 'مستخدم'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={profile.status === 'active' ? 'default' : 'destructive'}>
-                                {profile.status === 'active' ? 'نشط' : 'معطل'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {new Date(profile.created_at).toLocaleDateString('ar-SA')}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2 flex-wrap">
-                                {profile.status === 'active' ? (
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => updateUserStatus(profile.id, 'suspended')}
-                                    disabled={updating === profile.id}
-                                  >
-                                    {updating === profile.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Ban className="h-4 w-4" />
-                                    )}
-                                    تعطيل
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    onClick={() => updateUserStatus(profile.id, 'active')}
-                                    disabled={updating === profile.id}
-                                  >
-                                    {updating === profile.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <CheckCircle className="h-4 w-4" />
-                                    )}
-                                    تفعيل
-                                  </Button>
-                                )}
-                                
-                                {profile.role === 'user' ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => updateUserRole(profile.id, 'admin')}
-                                    disabled={updating === profile.id}
-                                  >
-                                    <Shield className="h-4 w-4" />
-                                    جعل مشرف
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => updateUserRole(profile.id, 'user')}
-                                    disabled={updating === profile.id}
-                                  >
-                                    <Users className="h-4 w-4" />
-                                    جعل مستخدم
-                                  </Button>
-                                )}
-
+  const renderTabContent = () => {
+    switch (currentTab) {
+      case 'users':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg sm:text-xl">قائمة المستخدمين</CardTitle>
+              <CardDescription className="text-sm">
+                يمكنك إدارة حالة المستخدمين وصلاحياتهم من هنا
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : isMobile ? (
+                <div className="space-y-4">
+                  {profiles.map(renderMobileUserCard)}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>البريد الإلكتروني</TableHead>
+                        <TableHead>الاسم الكامل</TableHead>
+                        <TableHead>الدور</TableHead>
+                        <TableHead>الحالة</TableHead>
+                        <TableHead>تاريخ الإنشاء</TableHead>
+                        <TableHead>الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {profiles.map((profile) => (
+                        <TableRow key={profile.id}>
+                          <TableCell className="font-medium">{profile.email}</TableCell>
+                          <TableCell>{profile.full_name || 'غير محدد'}</TableCell>
+                          <TableCell>
+                            <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
+                              {profile.role === 'admin' ? 'مشرف' : 'مستخدم'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={profile.status === 'active' ? 'default' : 'destructive'}>
+                              {profile.status === 'active' ? 'نشط' : 'معطل'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(profile.created_at).toLocaleDateString('ar-SA')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2 flex-wrap">
+                              {profile.status === 'active' ? (
                                 <Button
                                   size="sm"
-                                  variant="secondary"
-                                  onClick={() => handleViewCookies(profile.id, profile.email)}
+                                  variant="destructive"
+                                  onClick={() => updateUserStatus(profile.id, 'suspended')}
+                                  disabled={updating === profile.id}
                                 >
-                                  <Cookie className="h-4 w-4" />
-                                  الكوكيز
+                                  {updating === profile.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Ban className="h-4 w-4" />
+                                  )}
+                                  تعطيل
                                 </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => updateUserStatus(profile.id, 'active')}
+                                  disabled={updating === profile.id}
+                                >
+                                  {updating === profile.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4" />
+                                  )}
+                                  تفعيل
+                                </Button>
+                              )}
+                              
+                              {profile.role === 'user' ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateUserRole(profile.id, 'admin')}
+                                  disabled={updating === profile.id}
+                                >
+                                  <Shield className="h-4 w-4" />
+                                  جعل مشرف
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateUserRole(profile.id, 'user')}
+                                  disabled={updating === profile.id}
+                                >
+                                  <Users className="h-4 w-4" />
+                                  جعل مستخدم
+                                </Button>
+                              )}
 
-          <TabsContent value="reports">
-            <ReportsManagement />
-          </TabsContent>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleViewCookies(profile.id, profile.email)}
+                              >
+                                <Cookie className="h-4 w-4" />
+                                الكوكيز
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      case 'reports':
+        return <ReportsManagement />;
+      case 'sessions':
+        return <UserSessions />;
+      default:
+        return null;
+    }
+  };
 
-          <TabsContent value="sessions">
-            <UserSessions />
-          </TabsContent>
-        </Tabs>
-      </main>
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <SidebarInset className="flex-1">
+          <div className="min-h-screen bg-gray-50">
+            <Header />
+            
+            <div className="flex items-center gap-2 px-4 py-3 border-b bg-white">
+              <SidebarTrigger />
+              <h1 className="text-xl font-semibold">لوحة التحكم الإدارية</h1>
+            </div>
+
+            <main className="p-4 sm:p-6">
+              {renderTabContent()}
+            </main>
+          </div>
+        </SidebarInset>
+      </div>
 
       <UserCookiesModal
         userId={selectedUser?.id || ''}
@@ -418,6 +413,6 @@ export const AdminPanel = () => {
         isOpen={cookiesModalOpen}
         onClose={handleCloseCookiesModal}
       />
-    </div>
+    </SidebarProvider>
   );
 };
