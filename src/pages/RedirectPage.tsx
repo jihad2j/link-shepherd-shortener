@@ -4,22 +4,21 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, AlertTriangle, Loader2, Clock, Eye } from 'lucide-react';
+import { ExternalLink, AlertTriangle, Clock, Eye } from 'lucide-react';
 
 export const RedirectPage = () => {
   const { shortCode } = useParams();
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [linkData, setLinkData] = useState<any>(null);
   const [countdown, setCountdown] = useState(5);
   const [showAd, setShowAd] = useState(false);
   const [adViewed, setAdViewed] = useState(false);
+  const [isDirectRedirect, setIsDirectRedirect] = useState(false);
 
   useEffect(() => {
     const handleRedirect = async () => {
       if (!shortCode) {
         setError('رمز الرابط غير صالح');
-        setLoading(false);
         return;
       }
 
@@ -33,14 +32,12 @@ export const RedirectPage = () => {
 
         if (linkError || !linkInfo) {
           setError('الرابط غير موجود أو انتهت صلاحيته');
-          setLoading(false);
           return;
         }
 
         // التحقق من حالة الرابط
         if (linkInfo.status !== 'active') {
           setError('هذا الرابط غير متاح حالياً');
-          setLoading(false);
           return;
         }
 
@@ -56,11 +53,12 @@ export const RedirectPage = () => {
         const redirectType = linkInfo.redirect_type || 'direct';
         
         if (redirectType === 'direct') {
-          // التوجه المباشر
+          // التوجه المباشر فوراً دون إظهار أي صفحة
+          setIsDirectRedirect(true);
           window.location.href = linkInfo.original_url;
+          return;
         } else if (redirectType === 'timer') {
           // انتظار 5 ثواني
-          setLoading(false);
           const timer = setInterval(() => {
             setCountdown((prev) => {
               if (prev <= 1) {
@@ -73,14 +71,12 @@ export const RedirectPage = () => {
           }, 1000);
         } else if (redirectType === 'ad') {
           // إظهار صفحة الإعلانات
-          setLoading(false);
           setShowAd(true);
         }
         
       } catch (error) {
         console.error('Error redirecting:', error);
         setError('حدث خطأ أثناء التوجيه');
-        setLoading(false);
       }
     };
 
@@ -102,18 +98,9 @@ export const RedirectPage = () => {
     }, 1000);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="max-w-md w-full">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">جاري التوجيه...</h2>
-            <p className="text-gray-600 text-center">يتم توجيهك إلى الرابط المطلوب</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // في حالة التوجيه المباشر، لا نعرض شيء
+  if (isDirectRedirect) {
+    return null;
   }
 
   if (error) {
