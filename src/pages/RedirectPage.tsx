@@ -4,13 +4,16 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
+import { ExternalLink, AlertTriangle, Loader2, Clock, Eye } from 'lucide-react';
 
 export const RedirectPage = () => {
   const { shortCode } = useParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+  const [linkData, setLinkData] = useState<any>(null);
+  const [countdown, setCountdown] = useState(5);
+  const [showAd, setShowAd] = useState(false);
+  const [adViewed, setAdViewed] = useState(false);
 
   useEffect(() => {
     const handleRedirect = async () => {
@@ -22,33 +25,57 @@ export const RedirectPage = () => {
 
       try {
         // البحث عن الرابط المختصر
-        const { data: linkData, error: linkError } = await supabase
+        const { data: linkInfo, error: linkError } = await supabase
           .from('shortened_links')
           .select('*')
           .eq('short_code', shortCode)
           .single();
 
-        if (linkError || !linkData) {
+        if (linkError || !linkInfo) {
           setError('الرابط غير موجود أو انتهت صلاحيته');
           setLoading(false);
           return;
         }
 
         // التحقق من حالة الرابط
-        if (linkData.status !== 'active') {
+        if (linkInfo.status !== 'active') {
           setError('هذا الرابط غير متاح حالياً');
           setLoading(false);
           return;
         }
 
+        setLinkData(linkInfo);
+
         // تحديث عدد النقرات
         await supabase
           .from('shortened_links')
-          .update({ clicks: (linkData.clicks || 0) + 1 })
-          .eq('id', linkData.id);
+          .update({ clicks: (linkInfo.clicks || 0) + 1 })
+          .eq('id', linkInfo.id);
 
-        // التوجه المباشر للرابط
-        window.location.href = linkData.original_url;
+        // تحديد نوع إعادة التوجيه
+        const redirectType = linkInfo.redirect_type || 'direct';
+        
+        if (redirectType === 'direct') {
+          // التوجه المباشر
+          window.location.href = linkInfo.original_url;
+        } else if (redirectType === 'timer') {
+          // انتظار 5 ثواني
+          setLoading(false);
+          const timer = setInterval(() => {
+            setCountdown((prev) => {
+              if (prev <= 1) {
+                clearInterval(timer);
+                window.location.href = linkInfo.original_url;
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        } else if (redirectType === 'ad') {
+          // إظهار صفحة الإعلانات
+          setLoading(false);
+          setShowAd(true);
+        }
         
       } catch (error) {
         console.error('Error redirecting:', error);
@@ -59,6 +86,21 @@ export const RedirectPage = () => {
 
     handleRedirect();
   }, [shortCode]);
+
+  const handleSkipAd = () => {
+    if (linkData) {
+      window.location.href = linkData.original_url;
+    }
+  };
+
+  const handleAdViewed = () => {
+    setAdViewed(true);
+    setTimeout(() => {
+      if (linkData) {
+        window.location.href = linkData.original_url;
+      }
+    }, 1000);
+  };
 
   if (loading) {
     return (
@@ -92,6 +134,82 @@ export const RedirectPage = () => {
             >
               العودة إلى الصفحة الرئيسية
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // صفحة انتظار 5 ثواني
+  if (linkData && linkData.redirect_type === 'timer') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <Clock className="h-8 w-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-xl font-bold text-gray-900">إعادة التوجيه</CardTitle>
+            <CardDescription>
+              {linkData.title || 'سيتم توجيهك إلى الرابط المطلوب'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="text-4xl font-bold text-blue-600">{countdown}</div>
+            <p className="text-gray-600">ثانية متبقية</p>
+            <Button 
+              onClick={() => window.location.href = linkData.original_url}
+              variant="outline"
+              className="w-full"
+            >
+              انتقال فوري
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // صفحة الإعلانات
+  if (showAd && linkData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl font-bold text-gray-900">إعلان</CardTitle>
+            <CardDescription>مشاهدة الإعلان تدعم الموقع</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* منطقة الإعلان */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-8 rounded-lg text-center">
+              <Eye className="h-16 w-16 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold mb-2">إعلان تجريبي</h3>
+              <p className="text-lg opacity-90">شكراً لك على دعم موقعنا!</p>
+              <p className="text-sm mt-4 opacity-75">هذا إعلان تجريبي - يمكن استبداله بإعلانات حقيقية</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={handleSkipAd}
+                variant="outline"
+                className="flex-1"
+              >
+                تخطي الإعلان
+              </Button>
+              <Button 
+                onClick={handleAdViewed}
+                className="flex-1"
+                disabled={adViewed}
+              >
+                {adViewed ? 'جاري التوجيه...' : 'شاهدت الإعلان - متابعة'}
+              </Button>
+            </div>
+            
+            {linkData.title && (
+              <p className="text-center text-gray-600 text-sm">
+                الوجهة: {linkData.title}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

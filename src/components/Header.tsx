@@ -33,7 +33,7 @@ export const Header = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-3">
             <LinkIcon className="h-8 w-8 text-blue-600" />
-            <h1 className="text-xl font-bold text-gray-900">مختصر الروابط</h1>
+            <h1 className="text-xl font-bold text-gray-900">شيك لينك</h1>
           </div>
           
           {user && (

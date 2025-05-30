@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Copy, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -11,23 +12,34 @@ import { toast } from '@/hooks/use-toast';
 export const LinkShortener = () => {
   const [originalUrl, setOriginalUrl] = useState('');
   const [title, setTitle] = useState('');
+  const [redirectType, setRedirectType] = useState('direct');
   const [shortenedUrl, setShortenedUrl] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const formatUrl = (url: string) => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return 'http://' + url;
+    }
+    return url;
+  };
 
   const handleShortenUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const formattedUrl = formatUrl(originalUrl);
+      
       // Generate short code
       const { data: shortCodeData } = await supabase.rpc('generate_short_code');
       
       const { data, error } = await supabase
         .from('shortened_links')
         .insert({
-          original_url: originalUrl,
+          original_url: formattedUrl,
           short_code: shortCodeData,
           title: title || null,
+          redirect_type: redirectType,
           user_id: (await supabase.auth.getUser()).data.user?.id,
         })
         .select()
@@ -75,9 +87,10 @@ export const LinkShortener = () => {
               type="url"
               value={originalUrl}
               onChange={(e) => setOriginalUrl(e.target.value)}
-              placeholder="https://example.com"
+              placeholder="example.com"
               required
             />
+            <p className="text-sm text-gray-500">سيتم إضافة http:// تلقائياً إذا لم تكن موجودة</p>
           </div>
           
           <div className="space-y-2">
@@ -89,6 +102,20 @@ export const LinkShortener = () => {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="وصف مختصر للرابط"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="redirectType">نوع إعادة التوجيه</Label>
+            <Select value={redirectType} onValueChange={setRedirectType}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر نوع إعادة التوجيه" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="direct">إعادة توجيه مباشر</SelectItem>
+                <SelectItem value="timer">انتظار 5 ثواني</SelectItem>
+                <SelectItem value="ad">صفحة إعلانات مع زر تخطي</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <Button type="submit" className="w-full" disabled={loading}>
