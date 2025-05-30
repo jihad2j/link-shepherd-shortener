@@ -119,6 +119,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          browser_info: Json | null
+          cookies_data: Json | null
+          device_type: string | null
+          first_visit: string
+          id: string
+          ip_address: unknown | null
+          last_activity: string
+          location_info: Json | null
+          page_views: number | null
+          referrer: string | null
+          screen_resolution: string | null
+          session_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser_info?: Json | null
+          cookies_data?: Json | null
+          device_type?: string | null
+          first_visit?: string
+          id?: string
+          ip_address?: unknown | null
+          last_activity?: string
+          location_info?: Json | null
+          page_views?: number | null
+          referrer?: string | null
+          screen_resolution?: string | null
+          session_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser_info?: Json | null
+          cookies_data?: Json | null
+          device_type?: string | null
+          first_visit?: string
+          id?: string
+          ip_address?: unknown | null
+          last_activity?: string
+          location_info?: Json | null
+          page_views?: number | null
+          referrer?: string | null
+          screen_resolution?: string | null
+          session_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

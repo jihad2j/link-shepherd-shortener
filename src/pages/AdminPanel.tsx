@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReportsManagement } from '@/components/ReportsManagement';
+import { UserSessions } from '@/components/UserSessions';
 import { toast } from '@/hooks/use-toast';
 import { Users, Shield, Ban, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 
@@ -149,11 +150,11 @@ export const AdminPanel = () => {
             <Shield className="h-8 w-8 text-blue-600" />
             لوحة التحكم الإدارية
           </h1>
-          <p className="text-gray-600 mt-2">إدارة المستخدمين والتقارير</p>
+          <p className="text-gray-600 mt-2">إدارة المستخدمين والتقارير وجلسات المستخدمين</p>
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               إدارة المستخدمين
@@ -161,6 +162,10 @@ export const AdminPanel = () => {
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               إدارة التقارير
+            </TabsTrigger>
+            <TabsTrigger value="sessions" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              جلسات المستخدمين
             </TabsTrigger>
           </TabsList>
 
@@ -273,6 +278,10 @@ export const AdminPanel = () => {
 
           <TabsContent value="reports">
             <ReportsManagement />
+          </TabsContent>
+
+          <TabsContent value="sessions">
+            <UserSessions />
           </TabsContent>
         </Tabs>
       </main>

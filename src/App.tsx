@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { AuthForm } from "@/components/AuthForm";
 import { Dashboard } from "@/pages/Dashboard";
 import { RedirectPage } from "@/pages/RedirectPage";
@@ -16,6 +17,7 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   const { user, loading } = useAuth();
+  useSessionTracking(); // Track user sessions
 
   if (loading) {
     return (
