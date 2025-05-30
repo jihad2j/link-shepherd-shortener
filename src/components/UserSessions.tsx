@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserSession {
   id: string;
@@ -13,12 +14,12 @@ interface UserSession {
   ip_address: string | null;
   user_agent: string | null;
   device_type: string | null;
-  screen_resolution: string | null;
   browser_info: any;
+  screen_resolution: string | null;
+  referrer: string | null;
   location_info: any;
   cookies_data: any;
-  referrer: string | null;
-  page_views: number | null;
+  page_views: number;
   first_visit: string;
   last_activity: string;
   profiles?: {
@@ -28,6 +29,7 @@ interface UserSession {
 }
 
 export const UserSessions = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,26 +47,18 @@ export const UserSessions = () => {
           )
         `)
         .order('last_activity', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) {
         console.error('Error fetching sessions:', error);
         throw error;
       }
 
-      console.log('Sessions data:', data);
-      
-      // Transform the data to match our interface
-      const transformedSessions: UserSession[] = (data || []).map(session => ({
-        ...session,
-        ip_address: session.ip_address ? String(session.ip_address) : null,
-      }));
-      
-      setSessions(transformedSessions);
+      setSessions(data || []);
     } catch (error: any) {
       console.error('Error in fetchSessions:', error);
       toast({
-        title: "خطأ في جلب جلسات المستخدمين",
+        title: "خطأ في جلب الجلسات",
         description: error.message,
         variant: "destructive",
       });
@@ -76,17 +70,6 @@ export const UserSessions = () => {
   useEffect(() => {
     fetchSessions();
   }, []);
-
-  const getDeviceIcon = (deviceType: string | null) => {
-    switch (deviceType?.toLowerCase()) {
-      case 'mobile':
-        return <Smartphone className="h-4 w-4" />;
-      case 'tablet':
-        return <Tablet className="h-4 w-4" />;
-      default:
-        return <Monitor className="h-4 w-4" />;
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('ar-SA', {
@@ -102,7 +85,7 @@ export const UserSessions = () => {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">جاري تحميل جلسات المستخدمين...</div>
+          <div className="text-center">جاري تحميل الجلسات...</div>
         </CardContent>
       </Card>
     );
@@ -133,84 +116,24 @@ export const UserSessions = () => {
           <div className="space-y-4">
             {sessions.map((session) => (
               <div key={session.id} className="border rounded-lg p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      {getDeviceIcon(session.device_type)}
-                      <span className="font-medium">
-                        {session.profiles?.email || 'مستخدم غير مسجل'}
-                      </span>
-                      {session.device_type && (
-                        <Badge variant="secondary">{session.device_type}</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      {session.profiles?.full_name || 'غير محدد'}
-                    </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p><strong>الجلسة:</strong> {session.session_id}</p>
+                    <p><strong>عنوان IP:</strong> {session.ip_address || 'غير محدد'}</p>
+                    <p><strong>نوع الجهاز:</strong> {session.device_type || 'غير محدد'}</p>
+                    <p><strong>دقة الشاشة:</strong> {session.screen_resolution || 'غير محدد'}</p>
                   </div>
-                  <div className="text-right text-sm text-gray-500">
-                    <div>آخر نشاط: {formatDate(session.last_activity)}</div>
-                    <div>أول زيارة: {formatDate(session.first_visit)}</div>
+                  <div>
+                    <p><strong>المتصفح:</strong> {session.browser_info?.name || 'غير محدد'}</p>
+                    <p><strong>المرجع:</strong> {session.referrer || 'مباشر'}</p>
+                    <p><strong>عدد الصفحات:</strong> {session.page_views}</p>
+                    <p><strong>أول زيارة:</strong> {formatDate(session.first_visit)}</p>
+                    <p><strong>آخر نشاط:</strong> {formatDate(session.last_activity)}</p>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">عنوان IP:</span>{' '}
-                    <span className="text-gray-600">
-                      {session.ip_address || 'غير محدد'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">عدد المشاهدات:</span>{' '}
-                    <span className="text-gray-600">
-                      {session.page_views || 0}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">دقة الشاشة:</span>{' '}
-                    <span className="text-gray-600">
-                      {session.screen_resolution || 'غير محدد'}
-                    </span>
-                  </div>
-                  {session.referrer && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <span className="font-medium">المرجع:</span>{' '}
-                      <span className="text-gray-600 break-all">
-                        {session.referrer}
-                      </span>
-                    </div>
-                  )}
-                  {session.user_agent && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <span className="font-medium">وكيل المستخدم:</span>{' '}
-                      <span className="text-gray-600 break-all text-xs">
-                        {session.user_agent}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                {(session.browser_info || session.location_info) && (
-                  <div className="mt-3 pt-3 border-t">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {session.browser_info && (
-                        <div>
-                          <span className="font-medium">معلومات المتصفح:</span>
-                          <pre className="text-xs bg-gray-50 p-2 rounded mt-1 overflow-auto">
-                            {JSON.stringify(session.browser_info, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                      {session.location_info && (
-                        <div>
-                          <span className="font-medium">معلومات الموقع:</span>
-                          <pre className="text-xs bg-gray-50 p-2 rounded mt-1 overflow-auto">
-                            {JSON.stringify(session.location_info, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
+                {session.profiles && (
+                  <div className="mt-2 pt-2 border-t">
+                    <p className="text-sm"><strong>المستخدم:</strong> {session.profiles.full_name || session.profiles.email}</p>
                   </div>
                 )}
               </div>

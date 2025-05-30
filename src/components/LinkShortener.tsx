@@ -5,13 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, ExternalLink } from 'lucide-react';
+import { Copy, ExternalLink, Shuffle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const LinkShortener = () => {
   const [originalUrl, setOriginalUrl] = useState('');
   const [title, setTitle] = useState('');
+  const [customCode, setCustomCode] = useState('');
   const [redirectType, setRedirectType] = useState('direct');
   const [shortenedUrl, setShortenedUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,28 +24,69 @@ export const LinkShortener = () => {
     return url;
   };
 
+  const generateRandomCode = async () => {
+    try {
+      const { data: shortCodeData } = await supabase.rpc('generate_short_code');
+      if (shortCodeData) {
+        setCustomCode(shortCodeData);
+      }
+    } catch (error) {
+      console.error('Error generating random code:', error);
+    }
+  };
+
+  const validateCustomCode = (code: string) => {
+    // Allow only alphanumeric characters and hyphens, 3-50 characters
+    const regex = /^[a-zA-Z0-9-]{3,50}$/;
+    return regex.test(code);
+  };
+
+  const checkCodeAvailability = async (code: string) => {
+    const { data, error } = await supabase
+      .from('shortened_links')
+      .select('short_code')
+      .eq('short_code', code)
+      .single();
+
+    return !data; // Returns true if code is available (no existing data)
+  };
+
   const handleShortenUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const formattedUrl = formatUrl(originalUrl);
-      
-      console.log('Creating link with title:', title); // Debug log
-      
-      // Generate short code
-      const { data: shortCodeData } = await supabase.rpc('generate_short_code');
-      
-      if (!shortCodeData) {
-        throw new Error('فشل في توليد الرمز المختصر');
+      let finalShortCode = customCode.trim();
+
+      // If no custom code provided, generate one
+      if (!finalShortCode) {
+        const { data: shortCodeData } = await supabase.rpc('generate_short_code');
+        if (!shortCodeData) {
+          throw new Error('فشل في توليد الرمز المختصر');
+        }
+        finalShortCode = shortCodeData;
+      } else {
+        // Validate custom code
+        if (!validateCustomCode(finalShortCode)) {
+          throw new Error('الرمز المختصر يجب أن يحتوي على أحرف وأرقام فقط (3-50 حرف)');
+        }
+
+        // Check if custom code is available
+        const isAvailable = await checkCodeAvailability(finalShortCode);
+        if (!isAvailable) {
+          throw new Error('هذا الرمز المختصر مستخدم بالفعل، يرجى اختيار رمز آخر');
+        }
       }
 
+      console.log('Creating link with title:', title); // Debug log
+      
       const { data, error } = await supabase
         .from('shortened_links')
         .insert({
           original_url: formattedUrl,
-          short_code: shortCodeData,
-          title: title.trim() || null, // Ensure we trim whitespace and use null if empty
+          short_code: finalShortCode,
+          title: title.trim() || null,
           redirect_type: redirectType,
           user_id: (await supabase.auth.getUser()).data.user?.id,
         })
@@ -64,6 +106,7 @@ export const LinkShortener = () => {
       // Clear form after successful creation
       setOriginalUrl('');
       setTitle('');
+      setCustomCode('');
       setRedirectType('direct');
       
       toast({
@@ -123,6 +166,37 @@ export const LinkShortener = () => {
             <p className="text-sm text-gray-500">
               {title.length}/100 حرف - العنوان سيظهر في قائمة الروابط
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="customCode">الرمز المختصر (اختياري)</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="customCode"
+                type="text"
+                value={customCode}
+                onChange={(e) => setCustomCode(e.target.value)}
+                placeholder="مثال: my-link"
+                className="flex-1"
+                maxLength={50}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={generateRandomCode}
+                className="shrink-0"
+              >
+                <Shuffle className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-gray-500">
+              3-50 حرف، أحرف وأرقام وشرطات فقط. إذا تُرك فارغاً سيتم توليد رمز عشوائي
+            </p>
+            {customCode && (
+              <p className="text-sm text-blue-600" dir="ltr">
+                {window.location.origin}/{customCode}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
