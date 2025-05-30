@@ -1,70 +1,65 @@
+
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { RefreshCw, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Monitor, Smartphone, Tablet, Eye, Globe, Clock, User } from 'lucide-react';
 
 interface UserSession {
   id: string;
-  user_id: string | null;
   session_id: string;
+  user_id: string | null;
   ip_address: string | null;
   user_agent: string | null;
+  device_type: string | null;
+  screen_resolution: string | null;
   browser_info: any;
   location_info: any;
   cookies_data: any;
+  referrer: string | null;
+  page_views: number | null;
   first_visit: string;
   last_activity: string;
-  page_views: number | null;
-  referrer: string | null;
-  device_type: string | null;
-  screen_resolution: string | null;
   profiles?: {
     email: string;
     full_name: string;
-  };
+  } | null;
 }
 
 export const UserSessions = () => {
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
-
-  useEffect(() => {
-    fetchSessions();
-  }, []);
 
   const fetchSessions = async () => {
     try {
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('user_sessions')
         .select(`
           *,
-          profiles (
+          profiles:user_id (
             email,
             full_name
           )
         `)
-        .order('last_activity', { ascending: false });
+        .order('last_activity', { ascending: false })
+        .limit(50);
 
-      if (error) throw error;
-      
-      // Type-safe transformation to ensure compatibility
-      const typedSessions: UserSession[] = (data || []).map(session => ({
-        ...session,
-        ip_address: session.ip_address ? String(session.ip_address) : null,
-      }));
-      
-      setSessions(typedSessions);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
+      if (error) {
+        console.error('Error fetching sessions:', error);
+        throw error;
+      }
+
+      console.log('Sessions data:', data);
+      setSessions(data || []);
+    } catch (error: any) {
+      console.error('Error in fetchSessions:', error);
       toast({
-        title: "خطأ",
-        description: "فشل في تحميل بيانات الجلسات",
+        title: "خطأ في جلب جلسات المستخدمين",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -72,8 +67,12 @@ export const UserSessions = () => {
     }
   };
 
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
   const getDeviceIcon = (deviceType: string | null) => {
-    switch (deviceType) {
+    switch (deviceType?.toLowerCase()) {
       case 'mobile':
         return <Smartphone className="h-4 w-4" />;
       case 'tablet':
@@ -83,193 +82,134 @@ export const UserSessions = () => {
     }
   };
 
-  const getTimeDifference = (dateString: string) => {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (diffHours > 0) {
-      return `منذ ${diffHours} ساعة`;
-    } else if (diffMinutes > 0) {
-      return `منذ ${diffMinutes} دقيقة`;
-    } else {
-      return 'الآن';
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('ar-SA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">جاري تحميل جلسات المستخدمين...</div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Globe className="h-6 w-6 text-blue-600" />
-          جلسات المستخدمين
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>جلسات المستخدمين</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchSessions}
+            disabled={loading}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            تحديث
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {sessions.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            لا توجد جلسات مسجلة بعد
+          <div className="text-center text-gray-500 py-8">
+            لا توجد جلسات مستخدمين
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>المستخدم</TableHead>
-                <TableHead>الجهاز</TableHead>
-                <TableHead>عدد المشاهدات</TableHead>
-                <TableHead>أول زيارة</TableHead>
-                <TableHead>آخر نشاط</TableHead>
-                <TableHead>الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sessions.map((session) => (
-                <TableRow key={session.id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {session.profiles ? (
-                        <>
-                          <div className="font-medium">{session.profiles.full_name || 'غير محدد'}</div>
-                          <div className="text-sm text-gray-600">{session.profiles.email}</div>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-2 text-gray-500">
-                          <User className="h-4 w-4" />
-                          زائر مجهول
+          <div className="space-y-4">
+            {sessions.map((session) => (
+              <div key={session.id} className="border rounded-lg p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      {getDeviceIcon(session.device_type)}
+                      <span className="font-medium">
+                        {session.profiles?.email || 'مستخدم غير مسجل'}
+                      </span>
+                      {session.device_type && (
+                        <Badge variant="secondary">{session.device_type}</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {session.profiles?.full_name || 'غير محدد'}
+                    </p>
+                  </div>
+                  <div className="text-right text-sm text-gray-500">
+                    <div>آخر نشاط: {formatDate(session.last_activity)}</div>
+                    <div>أول زيارة: {formatDate(session.first_visit)}</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">عنوان IP:</span>{' '}
+                    <span className="text-gray-600">
+                      {session.ip_address || 'غير محدد'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">عدد المشاهدات:</span>{' '}
+                    <span className="text-gray-600">
+                      {session.page_views || 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">دقة الشاشة:</span>{' '}
+                    <span className="text-gray-600">
+                      {session.screen_resolution || 'غير محدد'}
+                    </span>
+                  </div>
+                  {session.referrer && (
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <span className="font-medium">المرجع:</span>{' '}
+                      <span className="text-gray-600 break-all">
+                        {session.referrer}
+                      </span>
+                    </div>
+                  )}
+                  {session.user_agent && (
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <span className="font-medium">وكيل المستخدم:</span>{' '}
+                      <span className="text-gray-600 break-all text-xs">
+                        {session.user_agent}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {(session.browser_info || session.location_info) && (
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      {session.browser_info && (
+                        <div>
+                          <span className="font-medium">معلومات المتصفح:</span>
+                          <pre className="text-xs bg-gray-50 p-2 rounded mt-1 overflow-auto">
+                            {JSON.stringify(session.browser_info, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {session.location_info && (
+                        <div>
+                          <span className="font-medium">معلومات الموقع:</span>
+                          <pre className="text-xs bg-gray-50 p-2 rounded mt-1 overflow-auto">
+                            {JSON.stringify(session.location_info, null, 2)}
+                          </pre>
                         </div>
                       )}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getDeviceIcon(session.device_type)}
-                      <div className="space-y-1">
-                        <Badge variant="outline" className="text-xs">
-                          {session.device_type || 'غير محدد'}
-                        </Badge>
-                        {session.screen_resolution && (
-                          <div className="text-xs text-gray-500">{session.screen_resolution}</div>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {session.page_views || 1} مشاهدة
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {new Date(session.first_visit).toLocaleDateString('ar-SA')}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="text-sm">{getTimeDifference(session.last_activity)}</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(session.last_activity).toLocaleString('ar-SA')}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedSession(session)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          عرض التفاصيل
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>تفاصيل الجلسة</DialogTitle>
-                        </DialogHeader>
-                        {selectedSession && (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <h4 className="font-semibold mb-2">معلومات المستخدم</h4>
-                                <div className="space-y-1 text-sm">
-                                  <p><strong>البريد الإلكتروني:</strong> {selectedSession.profiles?.email || 'زائر مجهول'}</p>
-                                  <p><strong>الاسم:</strong> {selectedSession.profiles?.full_name || 'غير محدد'}</p>
-                                  <p><strong>معرف الجلسة:</strong> <code className="text-xs bg-gray-100 px-1 rounded">{selectedSession.session_id}</code></p>
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <h4 className="font-semibold mb-2">معلومات الجهاز</h4>
-                                <div className="space-y-1 text-sm">
-                                  <p><strong>نوع الجهاز:</strong> {selectedSession.device_type || 'غير محدد'}</p>
-                                  <p><strong>دقة الشاشة:</strong> {selectedSession.screen_resolution || 'غير محدد'}</p>
-                                  <p><strong>عنوان IP:</strong> {selectedSession.ip_address || 'غير محدد'}</p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <h4 className="font-semibold mb-2">معلومات المتصفح</h4>
-                              <div className="bg-gray-50 p-3 rounded text-sm">
-                                <p><strong>User Agent:</strong></p>
-                                <p className="text-xs break-all">{selectedSession.user_agent}</p>
-                              </div>
-                            </div>
-                            
-                            {selectedSession.browser_info && (
-                              <div>
-                                <h4 className="font-semibold mb-2">تفاصيل المتصفح</h4>
-                                <div className="bg-gray-50 p-3 rounded text-sm space-y-1">
-                                  <p><strong>اللغة:</strong> {selectedSession.browser_info.language}</p>
-                                  <p><strong>المنصة:</strong> {selectedSession.browser_info.platform}</p>
-                                  <p><strong>الكوكيز مفعلة:</strong> {selectedSession.browser_info.cookieEnabled ? 'نعم' : 'لا'}</p>
-                                  <p><strong>متصل بالإنترنت:</strong> {selectedSession.browser_info.onLine ? 'نعم' : 'لا'}</p>
-                                </div>
-                              </div>
-                            )}
-                            
-                            {selectedSession.cookies_data && Object.keys(selectedSession.cookies_data).length > 0 && (
-                              <div>
-                                <h4 className="font-semibold mb-2">بيانات الكوكيز</h4>
-                                <div className="bg-gray-50 p-3 rounded text-sm max-h-32 overflow-y-auto">
-                                  <pre className="text-xs">{JSON.stringify(selectedSession.cookies_data, null, 2)}</pre>
-                                </div>
-                              </div>
-                            )}
-                            
-                            <div>
-                              <h4 className="font-semibold mb-2">إحصائيات الزيارة</h4>
-                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <p><strong>عدد المشاهدات:</strong> {selectedSession.page_views || 1}</p>
-                                  <p><strong>المصدر:</strong> {selectedSession.referrer || 'مباشر'}</p>
-                                </div>
-                                <div>
-                                  <p><strong>أول زيارة:</strong> {new Date(selectedSession.first_visit).toLocaleString('ar-SA')}</p>
-                                  <p><strong>آخر نشاط:</strong> {new Date(selectedSession.last_activity).toLocaleString('ar-SA')}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

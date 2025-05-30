@@ -30,31 +30,48 @@ export const LinkShortener = () => {
     try {
       const formattedUrl = formatUrl(originalUrl);
       
+      console.log('Creating link with title:', title); // Debug log
+      
       // Generate short code
       const { data: shortCodeData } = await supabase.rpc('generate_short_code');
       
+      if (!shortCodeData) {
+        throw new Error('فشل في توليد الرمز المختصر');
+      }
+
       const { data, error } = await supabase
         .from('shortened_links')
         .insert({
           original_url: formattedUrl,
           short_code: shortCodeData,
-          title: title || null,
+          title: title.trim() || null, // Ensure we trim whitespace and use null if empty
           redirect_type: redirectType,
           user_id: (await supabase.auth.getUser()).data.user?.id,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      console.log('Created link data:', data); // Debug log
 
       const shortUrl = `${window.location.origin}/${data.short_code}`;
       setShortenedUrl(shortUrl);
       
+      // Clear form after successful creation
+      setOriginalUrl('');
+      setTitle('');
+      setRedirectType('direct');
+      
       toast({
         title: "تم اختصار الرابط بنجاح!",
-        description: "يمكنك الآن نسخ الرابط المختصر",
+        description: `تم إنشاء الرابط${title ? ` بعنوان: ${title}` : ''}`,
       });
     } catch (error: any) {
+      console.error('Error creating shortened link:', error);
       toast({
         title: "خطأ في اختصار الرابط",
         description: error.message,
@@ -101,7 +118,11 @@ export const LinkShortener = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="وصف مختصر للرابط"
+              maxLength={100}
             />
+            <p className="text-sm text-gray-500">
+              {title.length}/100 حرف - العنوان سيظهر في قائمة الروابط
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -118,7 +139,7 @@ export const LinkShortener = () => {
             </Select>
           </div>
           
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading || !originalUrl.trim()}>
             {loading ? 'جاري الاختصار...' : 'اختصار الرابط'}
           </Button>
         </form>
