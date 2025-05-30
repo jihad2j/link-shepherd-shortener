@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,7 +52,14 @@ export const UserSessions = () => {
         .order('last_activity', { ascending: false });
 
       if (error) throw error;
-      setSessions(data || []);
+      
+      // Type-safe transformation to ensure compatibility
+      const typedSessions: UserSession[] = (data || []).map(session => ({
+        ...session,
+        ip_address: session.ip_address ? String(session.ip_address) : null,
+      }));
+      
+      setSessions(typedSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       toast({

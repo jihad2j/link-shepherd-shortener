@@ -12,17 +12,33 @@ export const Header = () => {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
+    try {
+      const { error } = await signOut();
+      if (error) {
+        console.error('Logout error:', error);
+        toast({
+          title: "خطأ في تسجيل الخروج",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        // Clear local storage session data
+        localStorage.removeItem('session_id');
+        
+        toast({
+          title: "تم تسجيل الخروج",
+          description: "نراك قريباً!",
+        });
+        
+        // Force navigation to home page
+        navigate('/', { replace: true });
+      }
+    } catch (error: any) {
+      console.error('Unexpected logout error:', error);
       toast({
         title: "خطأ في تسجيل الخروج",
-        description: error.message,
+        description: "حدث خطأ غير متوقع",
         variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "تم تسجيل الخروج",
-        description: "نراك قريباً!",
       });
     }
   };

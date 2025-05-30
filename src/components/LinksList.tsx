@@ -26,6 +26,7 @@ export const LinksList = () => {
   const [editingLink, setEditingLink] = useState<Link | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editUrl, setEditUrl] = useState('');
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const fetchLinks = async () => {
     try {
@@ -56,6 +57,7 @@ export const LinksList = () => {
     setEditingLink(link);
     setEditTitle(link.title || '');
     setEditUrl(link.original_url);
+    setIsEditDialogOpen(true);
   };
 
   const handleUpdateLink = async () => {
@@ -77,6 +79,7 @@ export const LinksList = () => {
         description: "تم حفظ التغييرات",
       });
 
+      setIsEditDialogOpen(false);
       setEditingLink(null);
       fetchLinks();
     } catch (error: any) {
@@ -182,50 +185,20 @@ export const LinksList = () => {
                       <ExternalLink className="h-4 w-4" />
                     </Button>
                     
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(link)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>تعديل الرابط</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="editTitle">العنوان</Label>
-                            <Input
-                              id="editTitle"
-                              value={editTitle}
-                              onChange={(e) => setEditTitle(e.target.value)}
-                              placeholder="عنوان الرابط"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="editUrl">الرابط الأصلي</Label>
-                            <Input
-                              id="editUrl"
-                              value={editUrl}
-                              onChange={(e) => setEditUrl(e.target.value)}
-                              placeholder="https://example.com"
-                            />
-                          </div>
-                          <Button onClick={handleUpdateLink} className="w-full">
-                            حفظ التغييرات
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(link)}
+                      title="تعديل الرابط"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => handleDelete(link.id)}
+                      title="حذف الرابط"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -235,6 +208,43 @@ export const LinksList = () => {
             ))}
           </div>
         )}
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>تعديل الرابط</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="editTitle">العنوان</Label>
+                <Input
+                  id="editTitle"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="عنوان الرابط"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editUrl">الرابط الأصلي</Label>
+                <Input
+                  id="editUrl"
+                  value={editUrl}
+                  onChange={(e) => setEditUrl(e.target.value)}
+                  placeholder="https://example.com"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button onClick={handleUpdateLink} className="flex-1">
+                  حفظ التغييرات
+                </Button>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="flex-1">
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
